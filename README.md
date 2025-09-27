@@ -8,6 +8,5 @@
 
 **Proyecto final de curso - Estadística I**
 
-![](https://umg.edu.gt/img/Umg.png){width="150"}
-
+<img src="https://umg.edu.gt/img/Umg.png" width="150">
 Este proyecto fue desarrollado por alumnos de la facultad de Ingeniería en Sistemas de la información y ciencias de la computación para el curso de Estadística I.
