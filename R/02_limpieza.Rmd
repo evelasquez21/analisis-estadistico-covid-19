@@ -1,0 +1,55 @@
+---
+title: "02_Limpieza"
+author: "Equipo 6 Estadistica"
+date: "2025-10-02"
+output: html_document
+---
+
+```{r}
+library(DBI);
+library(duckdb);
+library(dplyr);
+library(lubridate)
+con <- dbConnect(duckdb::duckdb(), dbdir = "covid.duckdb", read_only = FALSE) 
+covid_tbl <- tbl(con, "covid_view") 
+
+## aqui agregue un Alter porque en la creacion de las vistas lo puse todo como varchar
+## para corregir mi vista le agregue un cast para cambiar los tipos de datos
+
+dbExecute(con,"CREATE OR REPLACE VIEW covid_view AS
+SELECT 
+  Country AS pais,
+  CAST(date AS DATE) AS fecha,
+  CAST(population AS DOUBLE) AS poblacion,
+  CAST(new_cases AS DOUBLE) AS casos_nuevos,
+  CAST(new_deaths AS DOUBLE) AS muertes_nuevas,
+  CAST(total_cases AS DOUBLE) AS casos_acum,
+  CAST(total_deaths AS DOUBLE) AS muertes_acum,
+  CAST(people_fully_vaccinated_per_hundred AS DOUBLE) AS vacunacion_completa_100
+FROM covid
+WHERE Country NOT IN ('World','International','High income','Upper middle income','Lower middle income','Low income');")
+
+# Ejemplo: seleccionar subconjunto (países y fechas) y tasas por 100k 
+paises_foco <- c("Guatemala","Honduras","El Salvador","Costa Rica","Panama")
+
+inicio <- as.Date("2021-01-01")
+fin <- as.Date("2022-12-31") 
+serie <- covid_tbl %>% 
+  filter(pais %in% paises_foco, fecha >= inicio, fecha <= fin)%>% 
+  mutate(
+      casos_100k = if_else(!is.na(poblacion) & poblacion > 0, 1e5 * casos_nuevos / poblacion, NA_real_), 
+      muertes_100k = if_else(!is.na(poblacion) & poblacion > 0, 1e5 * muertes_nuevas / poblacion, NA_real_)
+      ) %>%
+  arrange(pais, fecha) %>%
+  collect() 
+
+saveRDS(serie, file = "data/serie_filtrada.rds") 
+
+dbDisconnect(con, shutdown = TRUE)
+
+
+
+
+
+
+```

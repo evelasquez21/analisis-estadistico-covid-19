@@ -1,0 +1,98 @@
+---
+title: "Casos Covid"
+author: "Equipo 6 Estadistica"
+date: "2025-10-02"
+output: html_document
+---
+
+## R
+
+Este proyecto inicia aqui
+
+```{r install librerias duckdb y uso de las librerias}
+#install.packages("duckdb") quita el # si no tienes instalado duckdb
+# 
+# ##librerias a utilizar
+# library(c(duckdb, DBI, dplyr, dbplyr, readr, lubridate, ggplot2, broom, knitr, rmarkdown, quarto))
+```
+
+# conexión a un archivo (se guarda como base de datos)
+
+```{r}
+# === Paquetes requeridos ===
+required <- c("duckdb","DBI","dplyr","readr","lubridate")
+to_install <- setdiff(required, rownames(installed.packages())) 
+if (length(to_install)) install.packages(to_install)
+
+library(DBI)
+library(duckdb)
+library(dplyr)
+library(readr)
+library(lubridate)
+
+# === Parámetros ===
+dir.create("data", showWarnings = FALSE) 
+db_path <- "covid.duckdb"
+
+# Elegir fuente: "OWID" o "WHO"
+src <- "OWID"
+
+if (src == "OWID") {
+  url <- "https://catalog.ourworldindata.org/garden/covid/latest/compact/compact.csv" 
+  dest <- "data/owid_covid_compact.csv" 
+  id_col <- "location"
+  date_col <- "date"
+} else {
+  url <- "https://storage.googleapis.com/humdata-covid/WHO-COVID-19-global-data.csv" 
+  dest <- "data/WHO-COVID-19-global-data.csv" 
+  id_col <- "Country"
+  date_col <- "Date_reported"
+}
+
+# === Descarga ===
+download.file(url, dest, mode = "wb", quiet = TRUE)
+
+# === Conexión BD local (DuckDB) ===
+con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE) 
+
+# === Carga CSV en tabla DuckDB ===
+DBI::dbExecute(con, "CREATE OR REPLACE TABLE covid AS SELECT * FROM read_csv_auto(?,all_varchar = TRUE);", params = list(dest))
+
+# === Crear vista normalizada ===
+if (src == "OWID") {
+  DBI::dbExecute(con, "
+    CREATE OR REPLACE VIEW covid_view AS
+    SELECT 
+      Country AS pais,
+      CAST(date AS DATE) AS fecha,
+      population AS poblacion,
+      new_cases AS casos_nuevos,
+      new_deaths AS muertes_nuevas,
+      total_cases AS casos_acum,
+      total_deaths AS muertes_acum,
+      people_fully_vaccinated_per_hundred AS vacunacion_completa_100
+    FROM covid
+    WHERE Country NOT IN ('World','International','High income','Upper middle income','Lower middle income','Low income')
+  ")
+} else {
+  DBI::dbExecute(con, "
+    CREATE OR REPLACE VIEW covid_view AS
+    SELECT 
+      Country AS pais,
+      CAST(Date_reported AS DATE) AS fecha,
+      NULL::DOUBLE AS poblacion, -- puede integrarse población externa
+      New_cases AS casos_nuevos,
+      New_deaths AS muertes_nuevas,
+      Cumulative_cases AS casos_acum,
+      Cumulative_deaths AS muertes_acum,
+      NULL::DOUBLE AS vacunacion_completa_100
+    FROM covid
+  ")
+}
+
+# Cerrar conexión
+dbDisconnect(con, shutdown = TRUE)
+
+cat("✅ Ingesta completa. Base local creada en:", db_path, "\n")
+
+```
