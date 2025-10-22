@@ -1,0 +1,115 @@
+---
+title: "Proyecto Final – Estadística I: COVID‑19 con R y DuckDB"
+author: "Equipo"
+date: "`r format(Sys.Date())`"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    df-print: paged
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(fig.width = 8, fig.height = 4.5, dpi = 120)
+library(dplyr); library(readr); library(ggplot2)
+serie <- readRDS("../data/serie_filtrada.rds")
+```
+
+# Objetivos y preguntas
+
+-   Construir un pipeline reproducible (ingesta → limpieza → análisis).
+-   Realizar descriptivos, inferencia (t, χ², proporciones), ICs.
+-   Ajustar e interpretar un modelo lineal simple.
+-   Trabajar con DuckDB desde R y reportar de forma reproducible.
+
+**Preguntas guía (ejemplo seleccionado):** 1. ¿Cómo evolucionaron los casos/100k (MA7) en los países foco? 2. ¿Cambió la media de casos/100k entre 2021H1 y 2021H2 en Guatemala? 3. ¿Existe asociación entre incidencia (alta/baja) y cobertura de vacunación? 4. ¿Hay relación lineal entre % vacunación y casos/100k promedio en 2021H2?
+
+# Datos
+
+-   **Fuente:** Our World in Data (OWID), `compact.csv`.
+-   **Periodo:** 2021-01-01 a 2022-12-31 (editable en 02_limpieza.R).
+-   **Países foco:** CA (Guatemala, Honduras, El Salvador, Costa Rica, Panamá, Nicaragua, Belice).
+
+```{r}
+#| label: glimpse
+#| tbl-cap: "Vista inicial de la serie filtrada (primeras filas)."
+dplyr::glimpse(serie)
+head(serie, 10)
+```
+
+# Resultados descriptivos
+
+## Curva epidémica: casos/100k (MA7)
+
+```{r}
+#| label: fig-casos-ma7
+#| fig-cap: "Casos por 100k (Media móvil 7 días) por país."
+knitr::include_graphics("fig_casos_ma7.png", error = FALSE)
+```
+
+# Inferencia
+
+## t‑test (Guatemala 2021H1 vs 2021H2)
+
+El detalle del t‑test está en `report/t_test.txt`.
+
+```{r}
+#| label: mostrar-ttest
+#| results: asis
+if (file.exists("t_test.txt")) {
+  cat("**Resultados t-test:**\n\n")
+  cat(readr::read_file("t_test.txt"))
+} else {
+  cat("Archivo t_test.txt no encontrado (ejecuta R/03_analisis.R).")
+}
+```
+
+## Chi‑cuadrado
+
+El detalle está en `report/chi2.txt`.
+
+```{r}
+#| label: mostrar-chi2
+#| results: asis
+if (file.exists("chi2.txt")) {
+  cat("**Resultados χ²:**\n\n")
+  cat(readr::read_file("chi2.txt"))
+} else {
+  cat("Archivo chi2.txt no encontrado (ejecuta R/03_analisis.R).")
+}
+```
+
+# Modelo lineal simple
+
+El detalle del ajuste está en `report/regresion_lineal.txt`.
+
+```{r}
+#| label: mostrar-regresion
+#| results: asis
+if (file.exists("regresion_lineal.txt")) {
+  cat("**Regresión lineal:**\n\n")
+  cat(readr::read_file("regresion_lineal.txt"))
+} else {
+  cat("Archivo regresion_lineal.txt no encontrado (ejecuta R/04_modelo.R).")
+}
+```
+
+# Discusión y conclusiones
+
+-   Interpretación de tendencias por país y diferencias por periodo.
+-   Coherencia entre vacunación y niveles de casos/100k.
+-   Limitaciones: calidad y retraso de reporte, supuestos (linealidad, homocedasticidad), outliers.
+-   Recomendaciones para análisis futuro (series más largas, modelos multivariados).
+
+# Reproducibilidad
+
+```{r}
+sessionInfo()
+```
