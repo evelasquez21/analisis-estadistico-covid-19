@@ -9,8 +9,10 @@ library(lubridate)
 dir.create("data", showWarnings = FALSE)
 
 # Ruta de tu archivo CSV
-archivo_csv <- "C:/estadistica 1/PROYECTO R/analisis-estadistico-covid-19/data/compact.csv"
-
+#archivo_csv <- "C:/estadistica 1/PROYECTO R/analisis-estadistico-covid-19/data/compact.csv"
+url <- "https://catalog.ourworldindata.org/garden/covid/latest/compact/compact.csv"
+dest <- "data/owid_covid_compact.csv"
+download.file(url, dest, mode = "wb", quiet = TRUE)
 # Crear la base local DuckDB
 db_path <- "covid.duckdb"
 con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
@@ -19,7 +21,7 @@ con <- dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
 DBI::dbExecute(con, "
 CREATE OR REPLACE TABLE covid AS
 SELECT * FROM read_csv_auto(?, types={'date': 'VARCHAR'}, sample_size=-1);
-", params = list(archivo_csv))
+", params = list(dest))
 
 # Crear la vista covid_view con nombres estandarizados
 DBI::dbExecute(con, "
